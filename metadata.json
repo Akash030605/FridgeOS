@@ -1,0 +1,6 @@
+{
+  "name": "Fridge Reinvented — 3D Product Reveal",
+  "description": "Cinematic 3D interactive hero scene featuring a photorealistic refrigerator reveal and orbital ingredient physics built with React Three Fiber.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
