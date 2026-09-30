@@ -142,7 +142,7 @@ const FALLBACK_FRIDGE_PREVIEW =
  * so uploads through the reverse proxy are fast and never drop connection.
  */
 async function optimizeImageForUpload(file: File): Promise<File> {
-  if (file.size <= 800 * 1024) {
+  if (file.size <= 300 * 1024) {
     return file;
   }
 
@@ -152,7 +152,7 @@ async function optimizeImageForUpload(file: File): Promise<File> {
 
     img.onload = () => {
       URL.revokeObjectURL(tempUrl);
-      const maxDim = 1600;
+      const maxDim = 1280;
       let { width, height } = img;
 
       if (width > maxDim || height > maxDim) {

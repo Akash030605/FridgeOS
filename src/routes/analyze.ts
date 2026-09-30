@@ -106,6 +106,8 @@ router.post(
       const base64String = req.file.buffer.toString('base64');
       const mimeType = req.file.mimetype || 'image/jpeg';
 
+      const pass1Start = Date.now();
+
       // Pass 1: Initial forensic scan at temperature 0.1
       const rawResult = await generateJSON<unknown>({
         prompt: ANALYZE_IMAGE_PROMPT,
@@ -130,25 +132,35 @@ router.post(
       }
 
       // Pass 2: Self-verification fact-check against the SAME photo at temperature 0.1
+      // On Vercel Serverless Functions, skip or cap Pass 2 if Pass 1 already took >3.5s to prevent 10s serverless timeouts
       let finalIngredients = parsed.ingredients;
-      try {
-        const verifyRawResult = await generateJSON<unknown>({
-          prompt: buildVerifyIngredientsPrompt(parsed.ingredients),
-          image: {
-            mimeType,
-            base64Data: base64String,
-          },
-          responseSchema: geminiVerifyIngredientsResponseSchema,
-          temperature: ANALYZE_TEMPERATURE,
-        });
+      const pass1Elapsed = Date.now() - pass1Start;
 
-        const verifyValidation =
-          verifyIngredientsResponseSchema.safeParse(verifyRawResult);
-        if (verifyValidation.success) {
-          finalIngredients = verifyValidation.data.verified;
+      if (!process.env.VERCEL && pass1Elapsed < 4000) {
+        try {
+          const verifyRawResult = await Promise.race([
+            generateJSON<unknown>({
+              prompt: buildVerifyIngredientsPrompt(parsed.ingredients),
+              image: {
+                mimeType,
+                base64Data: base64String,
+              },
+              responseSchema: geminiVerifyIngredientsResponseSchema,
+              temperature: ANALYZE_TEMPERATURE,
+            }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Verify pass timeout')), 4500)
+            ),
+          ]);
+
+          const verifyValidation =
+            verifyIngredientsResponseSchema.safeParse(verifyRawResult);
+          if (verifyValidation.success) {
+            finalIngredients = verifyValidation.data.verified;
+          }
+        } catch {
+          // Retain Pass 1 forensic results if Pass 2 times out or spikes
         }
-      } catch {
-        // If Pass 2 encounters a transient spike, retain Pass 1 forensic results rather than failing the request
       }
 
       const cleaned = dedupeIngredients(finalIngredients);
