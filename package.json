@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "vite build",
+    "build": "vite build && esbuild src/vercelEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
     "start": "NODE_ENV=production tsx src/index.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
